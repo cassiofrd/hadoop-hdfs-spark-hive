@@ -1,0 +1,15 @@
+# Executa o job na linha de comando
+spark-submit Projetos_Spark/Spark_Projeto2_script.py
+# Vamos verificar agora os resultados
+# no script eu havia criado o diretório
+# teste1 na minha máquina local e salvei
+# os arquivos, os resultados estão sempre
+# no arquivo part-00000
+cd projeto2/
+gedit part-00000
+# se eu tiver criado o salvo o arquivo
+# no hdfs, basta verificar no diretório
+# criado o mesmo arquivo part-00000
+# o comando abaixo mostra os diretórios
+# presentes no hdfs
+hdfs dfs -ls /
