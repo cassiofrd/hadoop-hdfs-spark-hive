@@ -36,7 +36,7 @@ df.groupBy('Search_Engine_Num').count().orderBy('count',ascending=False).show(5,
 #referente à dummy, e o valor 1)
 from pyspark.ml.feature import OneHotEncoder
 search_engine_encoder=OneHotEncoder(inputCol="Search_Engine_Num",outputCol="Search_Engine_Vector")
-search_engine_encoder.transform(df)
+df=search_engine_encoder.transform(df)
 df.show(3,False)
 
 #vamos fazer algo semelhante com a variável country
