@@ -1,0 +1,600 @@
+#vamos criar um diretório no hdfs
+hdfs dfs -mkdir /user
+#dentro desse diretório "user", vamos criar o diretório "hadoop"
+hdfs dfs -mkdir /user/hadoop
+#vamos agora acrescentar alguns arquivos ao diretório
+#vou pegar todos os arquivso .xml da pasta hadoop e copiar para o diretório
+#hadoop que eu acabei de criar
+hdfs dfs -put /opt/hadoop/etc/hadoop/*.xml /user/hadoop
+#vamos verificar se copiou tudo
+#se eu tivesse bigdata, nesse caso, os dados seriam inseridos no meu cluster
+#e não em uma única máquina
+hdfs dfs -ls /user/hadoop
+#o hdfs é um componente do hadoop utilizado para fazer armazenamento distribuido
+#agora vamos utilizar o mapreduce, que é outro componente do hadoop utilizado para #processamento de dados
+#enquanto o spark trabalha em memória, o mapreduce trabalha em disco, o que pode
+#gerar um pouco de ineficiência/lentidão, mas no caso de trabalharmos com uma
+#quantidade muito grande de dados, o mapreduce é bom pois muitas vezes não há
+#memória suficiente para trabalhar os dados, sendo uma vantagem utilizar o disco
+#vamos pegar alguns dados no diretório mapreduce
+cd /opt/hadoop/share/hadoop/
+ls -la
+#vamos entrar no diretório mapreduce que está dentro do diretório hadoop
+cd mapreduce/
+ls -la
+#vamos voltar para o nosso diretório inicial
+cd ~
+#agora vamos trabalhar com o mapreduce, não mais com o hdfs
+#vamos executar um arquivo .jar indicando onde está o arquivo e executando
+#o comando grep que, busca no diretório os arquivos que atendem minha condição
+#a saida será gravada no diretório output
+#vou procurar se dentro dos arquivos xml eu tenho palavras que começam com dfs e tenham #qualquer padrão depois destas três letras
+#o poder desse comando é que estou trabalhando com dados não estruturados
+hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.2.0.jar grep /user/hadoop output 'dfs[a-z.]+'
+#agora vamos vizualizar os resultados da consulta
+
+#podemos visualizar diretamente no hdfs
+hdfs dfs -ls /user/hadoop/output
+#o arquivo sucess só indica que a pesquisa foi completada com sucesso
+#já o arquivo part-r-00000 é o que nos informa os resultados
+#para visualizar os resultados, eu tenho que transportar os dados do hdfs,
+#que é o meu sistema distribuído, para o meu sistema local, minha máquina
+#pois o hdfs não foi feito para possibilitar vizualisação
+#no comando abaixo eu extraio os dados do output e crio um novo diretório
+#output onde poderei visualizar os dados
+#veja como é simples, eu só coloco o nome do editor de texto (gedit) e o
+#nome do arquivo
+hdfs dfs -get output output
+cd output/
+gedit part-r-00000
+#como vemos, ele encontrou dois termos dentre toda essa loucura de dados de
+#tudo quanto é tipo, incrível, com dados não estruturados
+#IMPORTANTÍSSIMO: devemos desligar o hadoop antes de desligar a máquina
+#virtual, caso contrário podemos corromper o programa
+#ele é fechado com o seguinte comando
+stop-dfs.sh
+
+#Os três componentes do hadoop são:
+#hdfs: para armazenamento distribuido
+#mapreduce: para processamento ditribuido
+#yarn: para gerenciar o processamento distribuido
+
+#vamos agora configurar o yarn
+#com o yarn configurado, vamos repetir o comando de busca daquele texto,
+#salvando agora em output2 (sempre que excutamos um job, uma ação, devemos
+#criar um novo diretório para colocar o resultado, no caso, output2)
+#agora, todo o gerenciamento será feito pelo yarn
+hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.2.0.jar grep /user/hadoop output2 'dfs[a-z.]+'
+#a busca deu erro porque nós temos um diretório dentro do repositório, e o
+#comando só consegue buscar por arquivos não por diretórios
+#vamos então criar um diretório input dentro do diretório hadoop e colocar
+#todos os arquivos .xml dentro deste diretório input, onde não haverá nenhum
+#outro diretório
+#vamos mover os arquivos para lá
+hdfs dfs -mkdir input
+hdfs dfs -put /opt/hadoop/etc/hadoop/*.xml input
+#vamos agora utilizar este diretório como entrada para o nosso job
+hadoop jar /opt/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.2.0.jar grep input output3 'dfs[a-z.]+'
+
+#o hadoop tem basicamente duas funções principais:
+#realizar o armazenamento distribuido com o hdfs
+#realizar o processamento distribuido com o map reduce
+#para trabalhar com machine learning e dados estruturados são necessárias
+#outras ferramentas do ecossistema hadoop
+
+#descompactar
+tar -xvf hbase-2.2.0-bin.tar.gz
+#salvar no diretório opt
+sudo mv hbase-2.2.0 /opt/hbase
+#na pasta hbase vamos criar o diretório hfiles
+mkdir hfiles
+#agora vamos entrar no diretório conf e modificar os arquivos deconfiguração
+cd conf/
+#dois arquivos foram modificados
+gedit hbase-env.sh
+gedit hbase-site.xml
+#agora vamos modificar as variáveis de ambiente
+cd ~
+gedit .bashrc
+#agora podemos inicializar o hbase
+#o hdfs já tem que ter sido iniciado: start-dfs.sh
+start-hbase.sh
+hbase shell
+stop-hbase.sh
+stop-dfs.sh
+
+#descompactar
+tar -xvf apache-hive-3.1.1-bin.tar.gz
+#salvar no diretório opt
+#antes vou mudaro nome para hive
+sudo mv hive /opt
+#agora vamos entrar no diretório conf e modificar os arquivos deconfiguração
+cd /opt/hive
+cd conf/
+#vamos copiar dois arquivos e renomea-los
+cp hive-env.sh.template hive-env.sh
+cp hive-default.xml.template hive-default.xml
+#agora vamos modifica-los como diz o vídeo
+gedit hive-env.sh
+gedit hive-default.xml
+#vamos modificar uns diretórios no hdfs
+start-dfs.sh
+hdfs dfs -mkdir /user/hive
+#dentro do didretório hive vou criar o diretório warehouse
+hdfs dfs -mkdir /user/hive/warehouse
+#agora vamos configurar as variáveis de ambiente e atualizar com o source
+gedit .bashrc
+source .bashrc
+#agora só precisamos inicializar o schema e em sequência inicializaro hive
+#todo o banco relacional precisa de um esquema, que é um sistema de organização
+#bancos nosql não tem esquema, bancos relacionais, tem esquema
+#vamos utilizar o derby porque é mais simples, mas poderia ser mysql,postgree, etc
+schematool -dbType derby -initSchema
+hive
+show tables;
+
+#agora vamos instalar o pig
+#é uma camada que roda em cima do mapreduce com uma linguagem mais próxima do sql
+#ao passo que o mapreduce roda utilizando a linguagem java
+#vou extrair os dados e renomear a pasta para pig
+tar -xvf pig-0.17.0.tar.gz
+#agora vou arquivar a pasta pig no /opt
+sudo mv pig /opt
+#não tem arquivo de configuração, é só editar as variáveis de ambiente e atualizar com o source
+gedit .bashrc
+source .bashrc
+#agora é só executar o pig
+pig
+
+#agora vamos configurar o spark, que é um rival do mapreduce
+#enquanto o mapreduce faz grande parte do seu processamento em disco, o spark
+#faz a maior parte do seu processamento em memória, sendo por isso mais veloz
+#o mapreduce é mais útil quando não há memória suficiente no cluster
+#podemos armazenar os dados no hdfs e processar com spark ao invés de mapreduce
+tar -xvf spark-2.4.3-bin-hadoop2.7.tgz
+#vou renomear como spark e arquivar no opt
+sudo mv spark /opt
+#agora vamos configurar variáveis de ambiente, basicament SPARK_HOME e PATH
+gedit .bashrc
+source .bashrc
+#agora, é só chamar o spark-shell
+pyspark
+
+#agora vamos instalar o sqoop
+tar -xvf sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz
+#renomear e transferir
+sudo mv sqoop /opt
+#dentro do diretório sqoop vamos criar dois outros diretórios: accumulo e hcatalog
+mkdir accumulo
+mkdir hcatalog
+#agora vamos configurar
+cd conf/
+gedit sqoop-env-template.sh
+#agora falta configurar variávesi de ambiente
+gedit .bashrc
+source .bashrc
+#agora é só iniciar o sqoop
+sqoop version
+
+#agora vamos configurar o último componente do ecosistema hadoop, o apache flume
+#assim como o sqoop, ele serve para ingestão de dados ao hdfs
+tar -xvf apache-flume-1.9.0-bin.tar.gz
+sudo mv flume /opt
+#vamos para o diretório flume e entrar no diretório conf
+#vamos copiar o arquivo flume-env.sh.template e chamar a cópia de flume-env.sh
+cp flume-env.sh.template flume-env.sh
+#agora, vamos configura-lo
+gedit flume-env.sh
+#agora, variáveis de ambiente
+gedit .bashrc
+source .bashrc
+#para verificar se está tudo ok, digitar para ver as opções de configurações
+flume-ng help
+
+#agora vamos aprender os comandos para utilizar o hdfs
+#primeiro vamos iniciar o hdfs
+start-dfs.sh
+#grande parte dos comandos são iguais aos do linux:
+hdfs dfs -ls /
+#ele não retornou nada porque o diretório está vazio
+#vamos criar um diretório/pasta chamada user
+hdfs dfs -mkdir /user
+#agora vamos criar um outro diretório dentro de user
+hdfs dfs -mkdir /user/bigdata
+#vamos criar um arquivo dados.txt e copia-lo para o hdfs
+sudo mkdir /teste
+cd teste/
+gedit dados.txt
+#agora vamos copiar o arquivo para o hdfs
+hdfs dfs -put dados.txt /user/bigdata
+hdfs dfs -ls /user/bigdata
+ls -la
+#como vemos, o arquivo está no hdfs, ou seja, nos blocos dos datanodes
+#do meu cluster hadoop (os datanodes são os servidores, computadores)
+#lembrando que o hadoop criou cópias dos arquivos e salvou no cluster
+#vamos agora renomear o arquivo
+mv dados.txt dados2.txt
+#agora vamos pegar o arquivo lá no hdfs e trazer para o meu sistema operacional
+hdfs dfs -get /user/bigdata/dados.txt
+
+#agora vamos fazer alguns testes com arquivos maiores
+#vamos mover o arquivo ml-20m.zip para o diretório teste
+cd Downloads/
+mv ml-25m.zip ../teste/
+#agora vamos para o diretório teste e vamos colocar esse arquivo zip no hdfs
+#lembrando que no hdfs podemos colocar todo o tipo de dados, inclusive .zip
+start-dfs.sh
+hdfs dfs -put ml-25m.zip /user/bigdata
+#vamos verificar se o arquivo foi mesmo salvo
+hdfs dfs -ls /user/bigdata
+#para obter informações gerais do nosso hdfs, devemos utilizar o comando
+hdfs dfsadmin -report
+
+#agora vamos customizar o hdfs, modificando o local onde os dados e metadados
+#do hdfs são armazenados
+#altomaticamente o hdfs colocou os dados no tmp que é um diretório temporário
+#vamos perder os arquivos que já carregamos, mas isso não é problema
+#lembrando que o datanode guarda dados e o namenode guarda metadados
+mkdir /opt/hadoop/dfs
+mkdir /opt/hadoop/dfs/data
+mkdir /opt/hadoop/dfs/namespace_logs
+#Editar o arquivo $HADOOOP_HOME/etc/hadoop/hdfs-site.xml e adicionar as linhas:
+<property>
+  <name>dfs.namenode.name.dir</name>
+  <value>/opt/hadoop/dfs/namespace_logs</value>
+</property>
+<property>
+  <name>dfs.datanode.data.dir</name>
+  <value>/opt/hadoop/dfs/data</value>
+</property>
+
+#vamos agora limpar o diretório temporário
+cd /tmp/
+sudo rm -rf *
+hdfs namenode -format
+start-dfs.sh
+start-yarn.sh
+
+#finalmente, vamos ao que interessa, vamos importar dados do mysql para
+#o hdfs
+#eu poderia analisar os dados direto no mysql, porém trazer os mesmos para
+#o hdfs permite armazenar os dados de meneira distribuida e processar os 
+#mesmos também de maneira distribuida utilizar mapreduce ou spark
+#no mysql, utilizamos uma única máquina
+#vamos verificar se o mysql está instalado
+sudo systemctl status mysqld
+#caso não estiver rodando, basta repetir o comando abaixo com start, não status
+#vamos acessar o mysql
+mysql -u root -p
+#comonão havíamos efinido senha ao instalar o mysql, vamos faze-lo agora
+#a senha escolhida foi: Dsahadoop@1
+#agora vamos verificar se deu certo
+sudo systemctl status mysqld
+mysql -u root -p
+#ai coloca a senha Dsahadoop@1
+#vamos criar tabelas em um banco de dados mysql
+create database testedb;
+#agora vamos entrar nessa base que fizemos, vamos colocar todas as tabelas lá
+use testedb;
+create table empregados (username varchar(30), password varchar(30));
+insert into empregados value ('Alan Turing', 'dsahadoop');
+select * from empregados;
+#vamos sair do mysql
+exit
+#já temos o banco de dados criado, agora vamos coloca-lo no hdfs via sqoop,
+#temos que configurar o sqoop para conecta-lo no mysql
+#temos que baixar o conector jdbc para mysql (o mesmo valendo para sqlserver
+#ou oracle)
+#é só pesquisar no google mysql jdbc connector download, é o primeiro link
+#https://downloads.mysql.com/archives/c-j/
+#vamos baixar e descompactar
+unzip mysql-connector-java-8.0.16.zip
+#criou o diretório e vamos nele
+cd mysql-connector-java-8.0.16
+#o arquivo .jar é o connector, e devemos copiá-lo para o diretório .lib do sqoop
+#vamos copiar o arquivo e mandar para lá
+cp mysql-connector-java-8.0.16.jar /opt/sqoop/lib
+#agora já podemos conectar ao mysql, já temos o conector
+#devemos saber essa rotina e copiar para podermos conectar em outros serviços
+#como o sqlserver e o oracle
+
+#para importar a tabela do mysql para o hdfs vamos precisar usar o sqoop
+#primeiro vamos ver qual é a versão do sqoop que temos
+sqoop version
+#como vemos, é a versão 1.4.7
+#não devemos utilizar a versão 2 pois é um outro programa que deu errado
+#o comando abaixo é a string de conexão, vamos analisa-lo termo por termo
+#o primeiro termo se refere ao sqoop, nada a acrescentar
+#então eu passo a flag (parâmetro) list-databases, ou seja eu quero listar os bancos de #dados
+#coloco --connect e no próximo termo estabeleço que a conexão será feita via jdbc no #mysql que está no localhost na porta padrão
+sqoop list-databases --connect jdbc:mysql://localhost:3306/ --username root -P
+#vai aparecer uma mensagem de erro mas é normal,temos que corrigir como mostrado no #vídeo, após correção, rodar novamente que vai funcionar
+#vemos então todas as bases de dados salvas no mysql
+#na linha seguinte utilizamos o comando para importar os dados
+#como visto abaixo, podemos colocar a senha na própria linha de comando
+#mas antes, temos que inicializar o hdfs e o yarn para usar o sqoop
+#vamos precisar do yarn pois o mapreduce é utilizado para importações
+#se utilizamos o mapreduce, precisamos do yarn
+start-yarn.sh
+start-dfs.sh
+#veja no comando que selecionamos a base de dados testedb, tabela empregados e já #colocamos a senha, que não nos será pedida depois
+sqoop import --connect jdbc:mysql://localhost:3306/testedb --username root --password Dsahadoop@1 --table empregados --m 1
+#vamos verificar no hdfs
+hdfs dfs -ls /
+hdfs dfs -ls /user
+#entramos no diretório user e vemos que o hdfs criou o diretório hadoop
+#para guardar os dados que importamos, pois é o usuário que estamos usando
+hdfs dfs -ls /user/hadoop
+#em hadoop encontramos empregados, vamos entrar
+hdfs dfs -ls /user/empregados
+#o arquivo é o 'part-m-00000'
+#vamos agora pega-lo e traze-lo para o nosso sistema operacional
+#para isso utilizarmos o comando get e colocamos o endereço da base de dados
+hdfs dfs -get /user/hadoop/empregados/part-m-00000
+#se o arquivo está no sistema operacional, utilizamos os comando nosrmais
+#no prompt, não precisamos mais colocar 'hdfs dfs -' na frente
+#colocando 'ls', já vemos o arquivo e podemos abri-lo com nosso editor de texto
+ls
+#é o arquivo 'part-m-00000', vamos abri-lo
+gedit part-m-00000
+#funcionou!!!!!!!!!!!! consigo importar arquivos para o hdfs e exporta-los para o meu #sistema operacional (no caso o linux)
+#digitando no prompt de comando sqoop help descreve-se todos os comandos do sqoop
+#export, import, import-all-tables, e por aí vai
+
+#CAPÍTULO MAP REDUCE
+#um job é uma tarefa de processamento
+#vamos fazer processamento de jobs em nuvem, utilizando o WS da Amazon
+#em nuvem podemos montar um cluster e simular o mapreduce, já que ele
+#foi projetado para processar volumes muito grandes de dados
+#quase metade do mercado de computação em nuvem é da Amazon
+#a vantagem de utilizar computação em núvel ao invés de montar o cluster
+#vamos pagar apenas pelo tempo de utilização, não precisando montar o cluster
+#hoje em dia, é mais vantajoso utilizar computação em núvem que montar o cluster
+#computação em núvem reduz o custo total
+
+#UTILIZANDO O MAPREDUCE
+#vamos agora utilizar o mapreduce para contabilizar quantas avaliações com
+#cada número de estrelas nós tivemos no total
+#a primeira coisa a fazer é colocar os dados no hdfs
+start-dfs.sh
+#para trabalhar com mapreduce, além do hdfs, devemos iniciar também o yearn
+start-yarn.sh
+#vamos ver quais arquivos eu tenho no hdfs
+hdfs dfs -ls /
+#temos dois diretórios, tmp e user, vamos então criar um diretório para o
+#trabalho com o mapreduce
+hdfs dfs -mkdir /mapred
+#vamos dar uma olhada nos dados que baixamos, voltando ao sistema operacional
+#ou seja, sem digitar hdfs dfs-
+#entramos no diretório download do nosso sistema operacional
+cd Downloads/
+cd ml-100k/
+#vamos usar nosso novo editor de texto, o sublime para abrir a base u.data
+subl u.data
+#agora vamos copiar este dataset para o diretório mapred que criamos
+#no hdfs
+hdfs dfs -put Downloads/ml-100k/u.data /mapred
+#vamos verificar se está lá
+hdfs dfs -ls /mapred
+#está lá
+#agora vamos executar nosso script de python via terminal indicando o
+#endereço do arquivo no hdfs que nós vamos utilizar como base de dados
+#lembre-se, os dados não estão no nosso sistema local, estão no hdfs
+#além disso, devemos indicar que o processamento será feito pelo cluster
+#hadoop, adcionando -r hadoop
+python AvaliaFilme.py hdfs:///mapred/u.data -r hadoop
+#vemos que logo na primeira linha apareceu um erro: No configs found: falling back on auto-configuration
+#a partir dai foi erro atrás de erro
+#vamos corrigir o erro
+cd ~
+#temos que dizer onde está o interpretador python
+#vamos criar um arquivo oculto
+gedit .mrjob.conf
+#vamos configurar o arquivo como manda o vídeo e vamos tentar novamente o comando
+python AvaliaFilme.py hdfs:///mapred/u.data -r hadoop
+#conseguimos! executamos nosso primeiro job mapreduce e obtivemos o número
+#de filmes que foi classificado em cada categoria em número de estrelas
+
+#agora vamos fazer um segundo job mapreduce para gerar a média de amigos na
+#rede social por idade
+#antes de iniciar essa nova tarefa, vamos aprender o comando para eliminar
+#arquivos do hdfs, é igual no linux, mas tem que acrescentar hdfs dfs -
+hdfs dfs -rm /caminho_para_o_arquivo_nos_diretórios_do_hdfs
+#vamos agora copiar a base de dados da nossa máquina para o hdfs
+#como eu salvei no diretório do hadoop, vamos pega-lo lá
+hdfs dfs -put amigos_facebook.csv /mapred
+#vamos ver se está salvo lá
+hdfs dfs -ls /mapred
+#está salvo
+#agora vamos executar o script
+python AmigosIdade.py hdfs:///mapred/amigos_facebook.csv -r hadoop
+#funcionou, e eu percebi como o mapreduce é lerdo
+
+###########################################################################
+################################DATA MINING################################
+###########################################################################
+#agora vamos aprender o data minind, ainda utilizando o mapreduce
+#o data mining vai permitir que possamos procurar relações em um grande
+#conjunto de dados não estruturados, ou seja, em arquivos de todos os tipos
+#vamos pegar o livro OrgulhoePreconceito em txt e colocar no hdfs
+hdfs dfs -put OrgulhoePreconceito.txt /mapred
+python MR-DataMining-1.py hdfs:///mapred/OrgulhoePreconceito.txt -r hadoop
+#vamos tentar o segundo script
+python MR-DataMining-2.py hdfs:///mapred/OrgulhoePreconceito.txt -r hadoop
+
+###########################################################################
+####################################HBASE##################################
+#óbvio que só faz sentido utilizar o HBASE com um cluster, utilizar em só
+#uma máquina não faz sentido algum
+start-hbase.sh
+#vamos carregar os dados para o hbase e manipular os dados
+#vamos aprender também o pig, que converte comandos para mapreduce
+#vamos pegar um arquivo do hdfs e colocar no hbase utilizando o pig
+hdfs dfs -ls /
+#vejamos que o diretório hbase foi criado
+hdfs dfs -mkdir /user/dados
+hdfs dfs -mkdir /user/dados/clientes
+#vamos pegar um arquivo salvo no linux e colocar no hdfs, e depois do hdfs no hbase
+#o comando abaixo copia para o hdfs
+hdfs dfs -copyFromLocal clientes.txt /user/dados/clientes
+vamos ver se foi salvo e dar uma olhada no conteúdo do arquivo
+hdfs dfs -ls /user/dados/clientes
+#na linha abaixo, o comando para abrir um arquivo no hdfs
+#lembrando que o gedit nós usamos para abrir no linux
+hdfs dfs -cat /user/dados/clientes/clientes.txt
+#vamos agora criar uma tabela no hbase para receber os dados
+#primeiro vamos iniciar o a linha de comando do hbase, semelhante ao mysql
+hbase shell
+#temos criar o nome da tabela um nome para a família de colunas na qual vamos
+#colocar os dados, no caso a tabela é clientes e a família de colunas dados_clientes
+create 'clientes', 'dados_clientes'
+exit
+#criada a tabela, vamos utilizar o pig para inserir os dados do documento na tabela
+#o objetivo do pig é simplificaro mapreduce para importar mais fácil os dados
+#IMPORTANTE, antes, para o pig funcionar, devemos iniciar o jobhistoryserver 
+#basta utilizar o comando abaixo
+mr-jobhistory-daemon.sh start historyserver
+pig -x mapreduce
+#o pig ao ser iniciado já conecta diretamente ao hdfs
+#vamos para o diretório onde está os dados e então vamos definir os parâmetros
+#da tabela a ser criada
+cd /user/dados/clientes
+#segue o comando para colocar os dados no clientes.txt na tabela que criamos
+dados = LOAD 'clientes.txt' USING PigStorage(',') AS (id:chararray,nome:chararray,sobrenome:chararray,idade:int,funcao:chararray);
+#agora vamos jogar os dados no hbase
+STORE dados INTO 'hbase://clientes' USING org.apache.pig.backend.hadoop.hbase.HBaseStorage(
+'dados_clientes:nome
+ dados_clientes:sobrenome
+ dados_clientes:idade
+ dados_clientes:funcao'
+);
+#deu um erro
+hbase shell
+list
+scan 'clientes'
+#vamos pesquisar os dados
+get 'clientes', '1100002', (COLUMN=>'dados_clientes:nome')
+#modificar registros
+put 'clientes', '1100002', 'dados_clientes:nome', 'Bob'
+
+###########################################################################
+###############################HIVE########################################
+#vamos iniciar o hive
+#basta iniciar o hdfs o yarn e iniciar o hive
+start-dfs.sh
+start-yarn.sh
+hive
+#lembrando que tudo o que é criado utilizando o hive é armazenado no hdfs
+#é possível modificar isso, por exemplo se colocar tudo no serviço da amazon
+#ao invés de montar o cluster de computadores, por exemplo
+#a primeira coisa que vamos fazer é verificar se já existem bancos de dados
+show databases;
+create database dsacademy;
+show databases;
+use dsacademy;
+#veja os scripts com a criação das tabelas para dar uma olhada na linguagem, é quase sql
+#vamos criar a tabela e depois vamos inserir os dados por meio de uma tabela temporária
+CREATE TABLE IF NOT EXISTS colaboradores (id int, nome String, cargo String, salario decimal)
+COMMENT 'tabela de colaboradores'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+LINES TERMINATED BY '\n';
+show tables;
+describe colaboradores;
+ALTER TABLE colaboradores CHANGE salario salario Double;
+describe colaboradores;
+ALTER TABLE colaboradores ADD COLUMNS (cidade String COMMENT 'Nome da Cidade');
+describe colaboradores;
+show tables;
+#para ver os detalhes da tabela
+describe colaboradores;
+#vamos mudar o tipo da variável salário
+ALTER TABLE colaboradores CHANGE salario salario Double;
+#vamos adcionar uma coluna
+ALTER TABLE colaboradores ADD COLUMNS (cidade String COMMENT 'Nome da Cidade');
+describe colaboradores;
+#vamos criar uma área temporária para fazer manipulação de dados e depois
+#levar para o destino final, que será a tabela do hive
+create table temp_colab (texto String);
+show tables;
+#vamos carregar os dados na tabela temporária
+LOAD DATA LOCAL INPATH '/home/hadoop/Downloads/colaboradores.csv' OVERWRITE INTO TABLE temp_colab;
+#carregamos os dados para a tabela temporária como estão e depois vamos modificar
+#vejamos como os dados estão na tabela temporária
+select * from temp_colab;
+#agora vamos fazer a modificação na nossa tabela temporária
+INSERT overwrite table colaboradores 
+SELECT  
+  
+  regexp_extract(texto, '^(?:([^,]*),?){1}', 1) ID,  
+  regexp_extract(texto, '^(?:([^,]*),?){2}', 1) nome,  
+  regexp_extract(texto, '^(?:([^,]*),?){3}', 1) cargo,
+  regexp_extract(texto, '^(?:([^,]*),?){4}', 1) salario,  
+  regexp_extract(texto, '^(?:([^,]*),?){5}', 1) cidade
+
+FROM temp_colab;
+#vamos verificar se os dados estão organizados por coluna
+SELECT * FROM colaboradores;
+#como vemos, as colunas estão organizadas como queremos
+#vamos fazer alguns filtros, executar alguns comandos
+SELECT * FROM colaboradores WHERE Id = 1002;
+SELECT * FROM colaboradores WHERE salario >= 25000;
+SELECT * FROM colaboradores WHERE salario > 10000 AND cidade = 'Natal';
+SELECT sum(salario), cidade FROM colaboradores GROUP BY cidade;
+
+###########################################################################
+####################################MAHOUT#################################
+#vamos pegar as pastas ham e spam que estão em Downloads e colocar no hdfs
+start-dfs.sh
+start-yarn.sh
+jps
+#o comando NaiveBayes.sh tem o código para importação dos dados
+#ele está em Downloads
+cd Downloads/
+subl NaiveBayes.sh
+#vamos agora utilizar o k-means no mahout, que permite identificar a qual
+#grupo pertence cada tipo de dado
+#basta olhar o arquivo kmeans que já vem com os comandos
+
+##################################SPARK####################################
+#posso utilizar o spark sem o hadoop por meio do python, basta digitar
+#pyspark no terminal do lynux, mas nesse caso estaremos utilizando apenas
+#em uma máquina, não em um cluster
+#para ver os exemplos que vem com o spark basta entrar
+cd $SPARK_HOME
+ls -la
+cd examples/
+cd src/
+ls -la
+cd main/
+ls
+cd python/
+ls -la
+cd mllib/
+ls -la
+#ai temos uma série de exemplos de métodos de machine learning no python
+#incrível, vai dar para aprender spark e ml só mexendo nisso ai
+#vamos ver o arquivo com exemplo de regressão logística
+subl logistic_regression.py
+
+#vamos fazer um exercício de spark com processamento de linguagem natural
+spark submit app.py
+
+###########################################################################
+#após configurar o cluster spark e configurar o yarn para gerenciar spark,
+#já que este utiliza o map reduce, devemos iniciar o hdfs e o yarn e então
+#executar o script, lembrando que o arquivo com o script deve estar em 
+#formato .sh para ser executado, sendo possível agendar a execução do mesmo
+#com o linux
+start-yanr.sh
+start-dfs.sh
+#vamos dar permissão de executor para que o arquivo possa ser executado
+chmod 755 app.sh
+#agora vamos executar nosso arquivo app.sh com o código que fizemos
+#lembrando que, na verdade, o arquivo app.sh faz referência ao arquivo que
+#tem o código, o código mesmo não está nele, mas no arquivo app.sh vemos o
+#endereço do arquivo com o código (é aquele que calcula o pi), visto que
+#o arquivo de código não é diretamente executável, apenas arquivo .sh o 
+#são
+./app.sh
+#código executado, basta vermos os resultados
