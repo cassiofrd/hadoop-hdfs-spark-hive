@@ -3,7 +3,9 @@ conf=SparkConf().setMaster("local").setAppName("LinearRegression")
 sc=SparkContext(conf=conf)
 
 #vamos primeiro importar os dados
-df=spark.read.csv('Linear_regression_dataset.csv',inferSchema=True,header=True)
+#devemos colocar o caminho correto, iniciando de file// e ai o endereço
+#se o arquivo estiver no hdfs devemos colocar hdfs:// e ai colocar o endereço
+df=spark.read.csv('file:///home/hadoop/machine-learning-with-pyspark/chapter_4_Linear_Regression/Linear_regression_dataset.csv',inferSchema=True,header=True)
 
 #vamos fazer uma análise exploratória dos dados
 print((df.cont(),len(df.columns)))
